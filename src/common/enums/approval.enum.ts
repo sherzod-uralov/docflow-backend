@@ -1,0 +1,13 @@
+export enum ApprovalType {
+  SEQUENTIAL = 'SEQUENTIAL',
+  PARALLEL = 'PARALLEL',
+  AGREEMENT = 'AGREEMENT',
+  SIGNATURE = 'SIGNATURE',
+}
+
+export enum ApprovalStepStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  RETURNED = 'RETURNED',
+}
