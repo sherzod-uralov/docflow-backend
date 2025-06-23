@@ -42,7 +42,7 @@ export class ApprovalWorkflowsService {
         where: {
           documentId,
           status: { in: ['PENDING', 'IN_PROGRESS'] },
-        },
+        },//asdasd
       });
 
       if (existingWorkflow) {
