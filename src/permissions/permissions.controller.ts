@@ -8,7 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   HttpCode,
-  HttpStatus,
+  HttpStatus, UseGuards,
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
@@ -19,6 +19,8 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('permissions')
 @ApiBearerAuth()

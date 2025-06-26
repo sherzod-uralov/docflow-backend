@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -15,6 +15,8 @@ import { JournalsModule } from './journals/journals.module';
 import { ApprovalWorkflowsModule } from './approval-workflows/approval-workflows.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { SettingsModule } from './settings/settings.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PermissionsGuardModule } from './common/guards/permissions.module';
 import { minioConfig } from './config/minio.config';
 
@@ -37,6 +39,8 @@ import { minioConfig } from './config/minio.config';
     ApprovalWorkflowsModule,
     StatisticsModule,
     DepartmentsModule,
+    SettingsModule,
+    NotificationsModule,
     PermissionsGuardModule,
   ],
   controllers: [AppController],

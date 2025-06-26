@@ -5,10 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { SeedModule } from './seed/seed.module';
 import { SeedService } from './seed/seed.service';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
-  // Create a separate app for seeding
   const seedApp = await NestFactory.create(SeedModule);
   const seedService = seedApp.get(SeedService);
   await seedService.seedAdminUser();
@@ -22,7 +20,6 @@ async function bootstrap() {
     if (req.originalUrl === '/upload/large-stream-direct') {
       return next();
     }
-    // For all other routes, use the regular body parsers
     bodyParser.json({ limit: '50mb' })(req, res, (err) => {
       if (err) return next(err);
       bodyParser.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
@@ -30,15 +27,7 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:8080',
-      'http://192.168.28.86:3000',
-      'http://127.0.0.1:3000',
-      'http://192.168.0.111:3000',
-      '*',
-    ],
+    origin: "*",
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Origin',
@@ -62,9 +51,11 @@ async function bootstrap() {
 
   app.use('/upload/large-stream-direct', (req, res, next) => {
     req.setTimeout(60 * 60 * 1000);
-    res.setTimeout(60 * 60 * 1000);
+    res.setTimeout(60 * 60 * 1000); 
     next();
   });
+
+
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -93,11 +84,11 @@ async function bootstrap() {
     .addTag('documents', 'Hujjatlar boshqaruvi')
     .addTag('document-types', 'Hujjat turlari boshqaruvi')
     .addTag('journals', 'Jurnallar boshqaruvi')
-    .addTag('upload', 'Fayl yuklash')
     .addTag('approval-workflows', 'Kelishish jarayonlari')
+    .addTag('notifications', 'Bildirishnomalar')
     .addTag('statistics', 'Tizim statistikasi')
     .addTag('departments', 'Bo\'limlar boshqaruvi')
-    .addTag('websockets', 'Real-time WebSocket aloqa')
+    .addTag('settings', 'Tizim sozlamalari')
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
@@ -124,7 +115,6 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, document, customOptions);
 
-  await app.listen(process.env.PORT ?? 3003, '192.168.0.109');
+  await app.listen(process.env.PORT ?? 3003, '192.168.28.86');
 }
 bootstrap();
-//test1

@@ -6,7 +6,7 @@ import {
   IsArray,
   ValidateNested,
   ArrayMinSize,
-  Min,
+  Min, IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApprovalType } from '../../common/enums/approval.enum';
@@ -28,6 +28,14 @@ export class ApprovalStepDto {
   @Min(1, { message: 'Order must be at least 1' })
   @IsNotEmpty({ message: 'Order is required' })
   order: number;
+
+  @ApiProperty({ 
+    example: '2023-12-31T23:59:59Z',
+    description: 'Optional deadline for this specific step',
+    required: false,
+  })
+  @IsOptional()
+  deadline?: Date;
 }
 
 export class CreateApprovalWorkflowDto {
@@ -47,6 +55,14 @@ export class CreateApprovalWorkflowDto {
   @IsEnum(ApprovalType, { message: 'Type must be either SEQUENTIAL or PARALLEL' })
   @IsNotEmpty({ message: 'Type is required' })
   type: ApprovalType;
+
+  @ApiProperty({
+    example: '2023-12-31T23:59:59Z',
+    description: 'Optional deadline for the entire workflow',
+    required: false,
+  })
+  @IsOptional()
+  deadline?: Date;
 
   @ApiProperty({
     type: [ApprovalStepDto],

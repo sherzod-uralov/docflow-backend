@@ -24,10 +24,13 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { HasPermission } from '../common/decorators/has-permission.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+
 
 @ApiTags('document-types')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(PermissionsGuard,JwtAuthGuard)
 @Controller('document-types')
 export class DocumentTypesController {
   constructor(private readonly documentTypesService: DocumentTypesService) {}
@@ -46,6 +49,7 @@ export class DocumentTypesController {
     status: 409,
     description: 'Conflict. Document type name already in use.',
   })
+  @HasPermission('document-types:create')
   create(@Body() createDocumentTypeDto: CreateDocumentTypeDto) {
     return this.documentTypesService.create(createDocumentTypeDto);
   }
@@ -60,6 +64,7 @@ export class DocumentTypesController {
     status: 200,
     description: 'Return all document types with pagination.',
   })
+  @HasPermission('document-types:read')
   findAll(@Query() filterDto: FilterDocumentTypeDto) {
     return this.documentTypesService.findAll(filterDto);
   }
@@ -96,6 +101,7 @@ export class DocumentTypesController {
     status: 409,
     description: 'Conflict. Document type name already in use.',
   })
+  @HasPermission('document-types:update')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDocumentTypeDto: UpdateDocumentTypeDto,
@@ -118,6 +124,7 @@ export class DocumentTypesController {
     status: 409,
     description: 'Conflict. Document type is used by documents.',
   })
+  @HasPermission('document-types:delete')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.documentTypesService.remove(id);
   }

@@ -16,7 +16,7 @@ export class UpdateApprovalStatusDto {
     description: 'The new status of the approval step',
   })
   @IsEnum(ApprovalStepStatus, {
-    message: 'Status must be one of: PENDING, APPROVED, REJECTED, RETURNED',
+    message: 'Status must be one of: PENDING, APPROVED, REJECTED, RETURNED, RESUBMITTED',
   })
   @IsNotEmpty({ message: 'Status is required' })
   status: ApprovalStepStatus;
@@ -40,13 +40,34 @@ export class UpdateApprovalStatusDto {
   @IsNotEmpty({ message: 'Rejection reason is required when status is REJECTED or RETURNED' })
   rejectionReason?: string;
 
+
   @ApiProperty({
     example: 1,
-    description: 'ID of the step to return to (required if status is RETURNED)',
+    description: 'ID of the user to return to (required if status is RETURNED)',
     required: false,
   })
   @ValidateIf((o) => o.status === ApprovalStepStatus.RETURNED)
-  @IsNumber({}, { message: 'Return to step ID must be a number' })
-  @IsNotEmpty({ message: 'Return to step ID is required when status is RETURNED' })
-  returnToStepId?: number;
+  @IsNumber({}, { message: 'Return to user ID must be a number' })
+  @IsNotEmpty({ message: 'Return to user ID is required when status is RETURNED' })
+  returnToUserId?: number;
+
+  @ApiProperty({
+    example: 'I have corrected the document as requested',
+    description: 'Explanation of what was corrected (required if status is RESUBMITTED)',
+    required: false,
+  })
+  @ValidateIf((o) => o.status === ApprovalStepStatus.RESUBMITTED)
+  @IsString({ message: 'Resubmission explanation must be a string' })
+  @IsNotEmpty({ message: 'Resubmission explanation is required when status is RESUBMITTED' })
+  resubmissionExplanation?: string;
+
+  @ApiProperty({
+    example: 3,
+    description: 'ID of the user to resubmit to (required if status is RESUBMITTED)',
+    required: false,
+  })
+  @ValidateIf((o) => o.status === ApprovalStepStatus.RESUBMITTED)
+  @IsNumber({}, { message: 'Resubmit to user ID must be a number' })
+  @IsNotEmpty({ message: 'Resubmit to user ID is required when status is RESUBMITTED' })
+  resubmitToUserId?: number;
 }

@@ -18,7 +18,6 @@ export class DocumentTypesService {
 
   async create(createDocumentTypeDto: CreateDocumentTypeDto) {
     try {
-      // Check if document type with the same name already exists
       const existingDocumentType = await this.prisma.documentType.findUnique({
         where: { name: createDocumentTypeDto.name },
       });
@@ -29,7 +28,6 @@ export class DocumentTypesService {
         );
       }
 
-      // Create document type
       return await this.prisma.documentType.create({
         data: createDocumentTypeDto,
       });
@@ -46,14 +44,11 @@ export class DocumentTypesService {
     try {
       const { name, skip, take, sort } = filterDto;
 
-      // Build filter conditions
       const where: any = {};
 
       if (name) {
         where.name = { contains: name, mode: 'insensitive' };
       }
-
-      // Parse sort parameter
       let orderBy: any = { createdAt: 'desc' };
       if (sort) {
         const [field, direction] = sort.split(':');
@@ -61,11 +56,8 @@ export class DocumentTypesService {
           orderBy = { [field]: direction };
         }
       }
-
-      // Get total count for pagination
       const total = await this.prisma.documentType.count({ where });
 
-      // Get document types with pagination
       const documentTypes = await this.prisma.documentType.findMany({
         where,
         orderBy,
@@ -80,7 +72,6 @@ export class DocumentTypesService {
         },
       });
 
-      // Transform response to include document count
       const transformedDocumentTypes = documentTypes.map(documentType => ({
         ...documentType,
         documentCount: documentType._count.documents,
@@ -134,7 +125,6 @@ export class DocumentTypesService {
 
   async update(id: number, updateDocumentTypeDto: UpdateDocumentTypeDto) {
     try {
-      // Check if document type exists
       const existingDocumentType = await this.prisma.documentType.findUnique({
         where: { id },
       });
@@ -142,8 +132,6 @@ export class DocumentTypesService {
       if (!existingDocumentType) {
         throw new NotFoundException(`Document type with ID ${id} not found`);
       }
-
-      // Check if name is unique if it's being updated
       if (
         updateDocumentTypeDto.name &&
         updateDocumentTypeDto.name !== existingDocumentType.name
@@ -159,7 +147,6 @@ export class DocumentTypesService {
         }
       }
 
-      // Update document type
       return await this.prisma.documentType.update({
         where: { id },
         data: updateDocumentTypeDto,
@@ -175,7 +162,6 @@ export class DocumentTypesService {
 
   async remove(id: number) {
     try {
-      // Check if document type exists
       const existingDocumentType = await this.prisma.documentType.findUnique({
         where: { id },
         include: {
@@ -191,7 +177,6 @@ export class DocumentTypesService {
         throw new NotFoundException(`Document type with ID ${id} not found`);
       }
 
-      // Check if document type is used by any documents
       if (existingDocumentType._count.documents > 0) {
         throw new ConflictException(
           `Cannot delete document type with ID ${id} because it is used by ${existingDocumentType._count.documents} documents`,

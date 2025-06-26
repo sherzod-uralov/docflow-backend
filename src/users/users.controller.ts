@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { HasPermission } from '../common/decorators/has-permission.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -40,6 +41,7 @@ export class UsersController {
     status: 409,
     description: 'Conflict. Email or username already in use.',
   })
+  @HasPermission('users:create')
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
@@ -50,6 +52,7 @@ export class UsersController {
     status: 200,
     description: 'Return all users.',
   })
+  @HasPermission('users:read')
   findAll() {
     return this.usersService.findAll();
   }
@@ -86,6 +89,7 @@ export class UsersController {
     status: 409,
     description: 'Conflict. Email or username already in use.',
   })
+  @HasPermission('users:update')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -104,6 +108,7 @@ export class UsersController {
     status: 404,
     description: 'User not found.',
   })
+  @HasPermission('users:delete')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }

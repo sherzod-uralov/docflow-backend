@@ -10,4 +10,5 @@ export enum ApprovalStepStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   RETURNED = 'RETURNED',
+    RESUBMITTED = 'RESUBMITTED',
 }

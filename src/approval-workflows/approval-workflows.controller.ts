@@ -74,6 +74,84 @@ export class ApprovalWorkflowsController {
     return this.approvalWorkflowsService.getPendingApprovals(req.user.id);
   }
 
+  @Get('returned-to-me')
+  @ApiOperation({ summary: 'Get all steps returned to current user that need resubmission' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all steps that were returned to current user.',
+  })
+  getReturnedSteps(@Request() req) {
+    return this.approvalWorkflowsService.getReturnedSteps(req.user.id);
+  }
+
+  @Get('check-overdue')
+  @ApiOperation({ summary: 'Check for overdue steps and workflows and update their status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns information about overdue steps and workflows.',
+  })
+  checkOverdueSteps() {
+    return this.approvalWorkflowsService.checkOverdueSteps();
+  }
+
+  @Get(':workflowId/steps/:stepId/returnable-users')
+  @ApiOperation({ summary: 'Get users who can receive a return from current step' })
+  @ApiParam({ name: 'workflowId', description: 'Approval workflow ID' })
+  @ApiParam({ name: 'stepId', description: 'Approval step ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the list of users who can receive a return from current step.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User is not the approver for this step.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Approval workflow or step not found.',
+  })
+  getReturnableUsers(
+    @Param('workflowId', ParseIntPipe) workflowId: number,
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Request() req,
+  ) {
+    return this.approvalWorkflowsService.getReturnableUsers(workflowId, stepId, req.user.id);
+  }
+
+  @Get(':workflowId/steps/:stepId/resubmission-target')
+  @ApiOperation({ summary: 'Get the user who returned this step (for resubmission)' })
+  @ApiParam({ name: 'workflowId', description: 'Approval workflow ID' })
+  @ApiParam({ name: 'stepId', description: 'Approval step ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the user who returned this step.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Step not found or step was not returned.',
+  })
+  getResubmissionTarget(
+    @Param('workflowId', ParseIntPipe) workflowId: number,
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Request() req,
+  ) {
+    return this.approvalWorkflowsService.getResubmissionTarget(workflowId, stepId, req.user.id);
+  }
+
+  @Get(':workflowId/return-history')
+  @ApiOperation({ summary: 'Get complete return/resubmission history for workflow' })
+  @ApiParam({ name: 'workflowId', description: 'Approval workflow ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the return/resubmission history.',
+  })
+  getReturnHistory(
+    @Param('workflowId', ParseIntPipe) workflowId: number,
+    @Request() req,
+  ) {
+    return this.approvalWorkflowsService.getReturnHistory(workflowId, req.user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an approval workflow by ID' })
   @ApiParam({ name: 'id', description: 'Approval workflow ID' })
@@ -127,3 +205,4 @@ export class ApprovalWorkflowsController {
     );
   }
 }
+ 

@@ -231,7 +231,6 @@ export class DocumentsService {
         throw new ForbiddenException('You do not have permission to update this document');
       }
 
-      // Check if document type exists if it's being updated
       if (updateDocumentDto.typeId) {
         const documentType = await this.prisma.documentType.findUnique({
           where: { id: updateDocumentDto.typeId },
@@ -243,8 +242,6 @@ export class DocumentsService {
           );
         }
       }
-
-      // Update document
       const document = await this.prisma.document.update({
         where: { id },
         data: updateDocumentDto,
