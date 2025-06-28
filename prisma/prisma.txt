@@ -1,0 +1,227 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int                @id @default(autoincrement())
+  username             String             @unique
+  email                String             @unique
+  password             String
+  isActive             Boolean            @default(true)
+  roleId               Int
+  role                 Role               @relation(fields: [roleId], references: [id])
+  departmentId         Int?
+  department           Department?        @relation(fields: [departmentId], references: [id])
+  documents            Document[]
+  initiatedWorkflows   ApprovalWorkflow[] @relation("WorkflowInitiator")
+  approvalSteps        ApprovalStep[]     @relation("StepApprover")
+  permissions          UserPermission[] // Direct user permissions
+  notificationSettings Settings[] // User who receives deadline notifications
+  notifications        Notification[] // Notifications received by the user
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id           Int              @id @default(autoincrement())
+  name         String           @unique
+  description  String?
+  key          String           @unique
+  module       String
+  roles        RolePermission[]
+  users        UserPermission[] // Direct user permissions
+  parentId     Int?
+  parent       Permission?      @relation("PermissionHierarchy", fields: [parentId], references: [id])
+  children     Permission[]     @relation("PermissionHierarchy")
+  isActive     Boolean          @default(true)
+  resourceType String? // Optional resource type for resource-specific permissions
+  resourceId   String? // Optional resource ID for resource-specific permissions
+  conditions   Json? // Optional conditions for dynamic permission checking
+  expiresAt    DateTime? // Optional expiration date for temporary permissions
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@id([roleId, permissionId])
+}
+
+model UserPermission {
+  userId       Int
+  permissionId Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  resourceType String? // Optional resource type for resource-specific permissions
+  resourceId   String? // Optional resource ID for resource-specific permissions
+  conditions   Json? // Optional conditions for dynamic permission checking
+  expiresAt    DateTime? // Optional expiration date for temporary permissions
+  grantedById  Int? // Who granted this permission
+  grantedAt    DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@id([userId, permissionId])
+  @@index([resourceType, resourceId])
+  @@index([expiresAt])
+}
+
+model DocumentType {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  documents   Document[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Journal {
+  id          Int        @id @default(autoincrement())
+  name        String
+  prefix      String
+  kartoteka   String
+  orderNumber Int
+  documents   Document[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Department {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  parentId    Int?
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Document {
+  id                Int                @id @default(autoincrement())
+  title             String
+  description       String?
+  fileUrl           String
+  typeId            Int
+  type              DocumentType       @relation(fields: [typeId], references: [id])
+  journalId         Int?
+  journal           Journal?           @relation(fields: [journalId], references: [id])
+  hashtags          String?
+  createdById       Int
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  approvalWorkflows ApprovalWorkflow[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+enum ApprovalType {
+  SEQUENTIAL
+  PARALLEL
+  AGREEMENT
+  SIGNATURE
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+  RESUBMITTED
+}
+
+model ApprovalWorkflow {
+  id           Int            @id @default(autoincrement())
+  documentId   Int
+  document     Document       @relation(fields: [documentId], references: [id])
+  type         ApprovalType
+  status       String         @default("PENDING")
+  initiatedBy  Int
+  initiator    User           @relation("WorkflowInitiator", fields: [initiatedBy], references: [id])
+  steps        ApprovalStep[]
+  qrCodeUrl    String?
+  signatureUrl String?
+  deadline     DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ApprovalStep {
+  id                      Int                @id @default(autoincrement())
+  workflowId              Int
+  workflow                ApprovalWorkflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  approverId              Int
+  approver                User               @relation("StepApprover", fields: [approverId], references: [id])
+  order                   Int
+  status                  ApprovalStepStatus @default(PENDING)
+  comment                 String?
+  rejectionReason         String?
+  returnToStepId          Int?
+  resubmissionExplanation String?
+  nextStepId              Int?
+  deadline                DateTime?
+  completedAt             DateTime?
+  isOverdue               Boolean?
+  isResubmitted           Boolean?           @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+}
+
+model Settings {
+  id                         Int      @id @default(autoincrement())
+  key                        String   @unique
+  value                      String?
+  description                String?
+  deadlineNotificationUserId Int?
+  deadlineNotificationUser   User?    @relation(fields: [deadlineNotificationUserId], references: [id])
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+enum NotificationType {
+  OVERDUE_STEP
+  OVERDUE_WORKFLOW
+  WORKFLOW_APPROVED
+  WORKFLOW_REJECTED
+  WORKFLOW_RETURNED
+  WORKFLOW_RESUBMITTED
+  NEW_APPROVAL_REQUEST
+  SYSTEM
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}

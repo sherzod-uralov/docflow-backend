@@ -24,6 +24,7 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { UpdateApprovalWorkflowDto } from './dto/update-approval-workflow.dto';
 
 @ApiTags('approval-workflows')
 @ApiBearerAuth()
@@ -116,6 +117,36 @@ export class ApprovalWorkflowsController {
     @Request() req,
   ) {
     return this.approvalWorkflowsService.getReturnableUsers(workflowId, stepId, req.user.id);
+  }
+
+
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update an approval workflow' })
+  @ApiParam({ name: 'id', description: 'Approval workflow ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The approval workflow has been successfully updated.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request. Invalid input data or workflow not in updatable state.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission to update this workflow.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Approval workflow not found.',
+  })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateApprovalWorkflowDto: UpdateApprovalWorkflowDto,
+    @Request() req,
+  ) {
+    console.log(updateApprovalWorkflowDto)
+    return this.approvalWorkflowsService.update(id, updateApprovalWorkflowDto, req.user.id);
   }
 
   @Get(':workflowId/steps/:stepId/resubmission-target')

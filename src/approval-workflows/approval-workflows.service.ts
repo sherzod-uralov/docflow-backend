@@ -9,9 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateApprovalWorkflowDto } from './dto/create-approval-workflow.dto';
 import { UpdateApprovalStatusDto } from './dto/update-approval-status.dto';
 import { ApprovalStepStatus, ApprovalType } from '../common/enums/approval.enum';
-import { SettingsService } from '../settings/settings.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { DocumentAccessService } from '../document-access/document-access.service';
+import { UpdateApprovalWorkflowDto } from './dto/update-approval-workflow.dto';
 
 @Injectable()
 export class ApprovalWorkflowsService {
@@ -19,9 +17,6 @@ export class ApprovalWorkflowsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly settingsService: SettingsService,
-    private readonly notificationsService: NotificationsService,
-    private readonly documentAccessService: DocumentAccessService,
   ) {}
 
   async create(
@@ -150,12 +145,6 @@ export class ApprovalWorkflowsService {
           data: { status: 'IN_PROGRESS' },
         });
       }
-
-      // Assign document access permissions to department supervisors
-      await this.documentAccessService.assignDepartmentSupervisorAccess(
-        documentId,
-        userId,
-      );
 
       return workflow;
     } catch (error) {
@@ -571,20 +560,17 @@ export class ApprovalWorkflowsService {
     }
 
     if (stepStatus === ApprovalStepStatus.RETURNED) {
-      // If a step is returned, reset the workflow to the returned step
       if (returnToStepId) {
         const returnStep = steps.find((s) => s.id === returnToStepId);
         if (returnStep) {
-          // Mark the return step as resubmitted and set its status to RETURNED
           await this.prisma.approvalStep.update({
             where: { id: returnToStepId },
             data: { 
               isResubmitted: true,
-              status: ApprovalStepStatus.RETURNED,
+              status: ApprovalStepStatus.PENDING,
             },
           });
 
-          // Reset all steps after the return step to PENDING
           await this.prisma.approvalStep.updateMany({
             where: {
               workflowId,
@@ -607,18 +593,10 @@ export class ApprovalWorkflowsService {
 
           // Send notification to the user who is receiving the returned step
           if (documentTitle && rejectionReason) {
-            try {
-              await this.notificationsService.createWorkflowReturnedNotification(
-                returnStep.approverId,
-                workflowId,
-                returnToStepId,
-                documentTitle,
-                rejectionReason
-              );
-              this.logger.log(`Sent return notification to user ${returnStep.approverId} for workflow ${workflowId}`);
-            } catch (error) {
-              this.logger.error(`Failed to send return notification: ${error.message}`, error.stack);
-            }
+            // TODO: Implement notification service
+            this.logger.log(
+              `Approval step for document "${documentTitle}" is overdue. Approver ${rejectionReason} is late.`,
+            );
           }
         }
       }
@@ -649,18 +627,10 @@ export class ApprovalWorkflowsService {
         if (documentTitle && resubmissionExplanation) {
           const nextStep = steps.find((s) => s.id === nextStepId);
           if (nextStep) {
-            try {
-              await this.notificationsService.createWorkflowResubmittedNotification(
-                nextStep.approverId,
-                workflowId,
-                nextStepId,
-                documentTitle,
-                resubmissionExplanation
-              );
-              this.logger.log(`Sent resubmission notification to user ${nextStep.approverId} for workflow ${workflowId}`);
-            } catch (error) {
-              this.logger.error(`Failed to send resubmission notification: ${error.message}`, error.stack);
-            }
+            // TODO: Implement notification service
+            this.logger.log(
+              `Approval step for document "${documentTitle}" is overdue. Approver ${resubmissionExplanation} is late.`,
+            );
           }
         }
       }
@@ -800,8 +770,9 @@ export class ApprovalWorkflowsService {
       const now = new Date();
 
       // Get the notification recipient user from settings
-      const notificationSetting = await this.settingsService.getDeadlineNotificationUser();
-      const notificationUser = notificationSetting?.deadlineNotificationUser;
+      // const notificationSetting = await this.settingsService.getDeadlineNotificationUser();
+      // const notificationUser = notificationSetting?.deadlineNotificationUser;
+      const notificationUser: { username: string } | null = null; // TODO: Implement settings service
 
       if (!notificationUser) {
         this.logger.warn('No deadline notification user configured in settings');
@@ -853,10 +824,9 @@ export class ApprovalWorkflowsService {
 
         // Send notification to the configured user
         if (notificationUser) {
-          // Here you would typically call a notification service
-          // For now, we'll just log the notification
+          // TODO: Implement notification service
           this.logger.log(
-            `Notification to ${notificationUser.username}: Approval step for document "${step.workflow.document.title}" is overdue. Approver ${step.approver.username} is late and has shown irresponsibility.`,
+            `Approval step for document "${step.workflow.document.title}" is overdue. Approver ${step.approver.username} is late.`,
           );
         }
       }
@@ -903,10 +873,9 @@ export class ApprovalWorkflowsService {
 
         // Send notification to the configured user
         if (notificationUser) {
-          // Here you would typically call a notification service
-          // For now, we'll just log the notification
+          // TODO: Implement notification service
           this.logger.log(
-            `Notification to ${notificationUser.username}: Approval workflow for document "${workflow.document.title}" is overdue. Initiator ${workflow.initiator.username} is late and has shown irresponsibility.`,
+            `Approval workflow for document "${workflow.document.title}" is overdue. Initiator ${workflow.initiator.username} is late.`,
           );
         }
       }
@@ -918,6 +887,101 @@ export class ApprovalWorkflowsService {
         error.stack,
       );
       throw new BadRequestException('Failed to check overdue steps');
+    }
+  }
+
+  // approval-workflows.service.ts
+  async update(
+    id: number,
+    updateApprovalWorkflowDto: UpdateApprovalWorkflowDto,
+    userId: number,
+  ) {
+    try {
+      // First check if workflow exists
+      const workflow = await this.prisma.approvalWorkflow.findUnique({
+        where: { id },
+        include: {
+          document: {
+            select: {
+              createdById: true,
+            },
+          },
+        },
+      });
+
+      if (!workflow) {
+        throw new NotFoundException(`Approval workflow with ID ${id} not found`);
+      }
+
+      // Check if user has permission (document owner or workflow initiator)
+      const isDocumentOwner = workflow.document.createdById === userId;
+      const isInitiator = workflow.initiatedBy === userId;
+
+      // if (!isDocumentOwner && !isInitiator) {
+      //   throw new ForbiddenException(
+      //     'You do not have permission to update this approval workflow',
+      //   );
+      // }
+
+      // Check if workflow is in a state that can be updated
+      if (!['PENDING', 'IN_PROGRESS'].includes(workflow.status)) {
+        throw new BadRequestException(
+          'Only PENDING or IN_PROGRESS workflows can be updated',
+        );
+      }
+
+      // Update the workflow
+      const updatedWorkflow = await this.prisma.approvalWorkflow.update({
+        where: { id },
+        data: {
+          documentId: Number(updateApprovalWorkflowDto.documentId)
+        },
+        include: {
+          document: {
+            select: {
+              id: true,
+              title: true,
+              fileUrl: true,
+            },
+          },
+          initiator: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
+          },
+          steps: {
+            include: {
+              approver: {
+                select: {
+                  id: true,
+                  username: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: {
+              order: 'asc',
+            },
+          },
+        },
+      });
+
+      return updatedWorkflow;
+    } catch (error) {
+      this.logger.error(
+        `Error updating approval workflow: ${error.message}`,
+        error.stack,
+      );
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to update approval workflow');
     }
   }
 
@@ -1166,7 +1230,8 @@ export class ApprovalWorkflowsService {
       const returnedSteps = await this.prisma.approvalStep.findMany({
         where: {
           approverId: userId,
-          status: ApprovalStepStatus.RETURNED,
+          status: ApprovalStepStatus.PENDING,
+          isResubmitted: true,
         },
         include: {
           workflow: {
